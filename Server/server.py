@@ -4,46 +4,51 @@ import os
 import os.path
 import netfunctions
 
-# Print usage string
+
 def usage():
+    """Prints the correct command line usage of this file"""
     print('Usage: python server.py <portNumber>')
 
-# Validate command line arguments
+
 def check_args():
-    # Check arguments length
+    """Validates the command line arguments given
+
+    Returns:
+    portnumber: The port number if valid, otherwise -1
+    """
+    # Check number of arguments
     if len(sys.argv) != 2:
         print('Wrong number of arguments')
         usage()
         return -1
     # Check port number is valid
     try:
-        portNo = int(sys.argv[1])
+        portnumber = int(sys.argv[1])
     except ValueError:
         print('Invalid port number')
         usage()
         return -1
     else:
-        return portNo
+        return portnumber
 
-# Check arguments
-portNo = check_args()
-if portNo < 0:
+
+# Validate port
+port = check_args()
+if port < 0:
     exit(1)
 
-# Create socket
+# Create TCP socket
 srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
-    # Register the socket with the OS
-    srv_sock.bind(("", portNo))
-    # Create a queue for incoming connection requests
+    # Register socket and create request queue
+    srv_sock.bind(("", port))
     srv_sock.listen(5)
 except Exception:
-    # Print exception and return erro code
+    # Error case
     print("Could not create socket (Failure)")
     exit(1)
 
-# Print confirmation message
-print('Socket created and listening on port ' + str(portNo))
+print('Socket created and listening on port ' + str(port))
 while True:
     try:
         print("Waiting for new client...")
@@ -57,11 +62,10 @@ while True:
             print('Client lost connection (Failure)')
             continue
 
-        # Split request into command and arguments
+        # Parse request
         commands = request.split(" ")
         cmd = commands[0]
 
-        # Check if command is list
         if cmd == "list":
             # Attempt to send listing
             try:
@@ -69,17 +73,14 @@ while True:
             except Exception:
                 print("Connection lost to client when sending listing (Failure)")
                 continue
-            # Print confirmation
             print("Sent listing (" + str(bytes) + " bytes) to " + str(cli_addr) + " (Success)")
             continue
 
 
-        # Get file name
+        # Check file exists
         msg = commands[1]
-        # Store if file exists
         fileExists = os.path.exists("./" + msg)
 
-        # Check if command is put
         if cmd == "put":
             # Check file doesn't already exist in directory
             if fileExists:
@@ -100,7 +101,7 @@ while True:
                 print("Connection lost to client when receiving file (Failure)")
                 netfunctions.delete_file(msg)
             continue
-        # Check if command is get
+
         if cmd == "get":
             # Check file exists in directory
             if not fileExists:
@@ -126,7 +127,6 @@ while True:
         print("Closed connection to client\n")
         cli_sock.close()
 
-#Close server socket to preserve resources
+# Close server socket
 srv_sock.close()
-#Exit with 0 code to show no error
 exit(0)
