@@ -4,150 +4,163 @@ import os
 import os.path
 import Server.netfunctions as netfunctions
 
-# Print usage string
+
 def usage():
+    """Prints the correct command line usage of this file"""
     print('Usage: python client.py <hostname> <portNumber> <command> (arguments)')
 
-# Validate command line arguments
+
 def check_args():
-    # Check argument length
+    """Validates the command line arguments given
+
+    Returns:
+    hostname: The host name chosen if valid, otherwise -1
+    portnumber: The port number chosen if valid, otherwise -1
+    cmd: The command chosen if valid, otherwise -1
+    msg: The command arguments if valid, otherwise -1
+    """
+    # Check number of arguments
     if len(sys.argv) < 4:
         print('Wrong number of arguments')
         usage()
         return (-1, -1, -1, -1);
 
-    # Get hostname and command issued
     hostname = sys.argv[1]
     cmd = sys.argv[3]
-
     # Get command arguments if they exist
     if len(sys.argv) == 3:
         msg = ""
     else:
         msg = " ".join(sys.argv[4:])
 
-    # Check port number is valid
+    # Validate port number
     try:
-        portNo = int(sys.argv[2])
+        portnumber = int(sys.argv[2])
     except ValueError:
         print('Please specify a valid port number')
         usage()
         return (-1,-1, -1, -1);
     else:
-        return hostname, portNo, cmd, msg
+        return hostname, portnumber, cmd, msg
 
 
 def isValidFilename(filename):
+    """Validates the given filename
+
+    Parameters:
+    filename (String): The file name to validate
+
+    Returns:
+    True if filename is valid, False otherwise
+    """
     if len(filename) == 0:
         print("Please include filename")
         return False
-    specialChars = ['\\','/','<','>',':', '*', '?', '"', '|']
-    for c in filename:
-        if c in specialChars:
-            print("Invalid character in filename: " + c + " (Failure)")
+    special_chars = ['\\','/','<','>',':', '*', '?', '"', '|']
+    for character in filename:
+        if character in special_chars:
+            print("Invalid character in filename: " + character + " (Failure)")
             return False
     return True
 
 def sendRequest(cmd, msg=""):
-    # Create socket
+    """Validates the given filename
+
+    Parameters:
+    cmd (String): The command to execute
+    msg (String): The argument of the command (default "")
+
+    Returns:
+    cli_sock: The socket created to send the request
+    """
+    # Create TCP socket and connect to server
     cli_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Connect socket to server
     try:
         print("Connecting...")
         cli_sock.connect((host, port))
     except Exception:
         print("Connection attempt to server failed (Failure)")
         exit(1)
-
-    # Confirm connection
     print('connected to ' + host + ":" + str(port))
 
+    # Concatenate command and arguments
     if len(msg) != 0:
         cmd = cmd + " " + msg
+
     cli_sock.sendall(str.encode(cmd))
+
     # Return socket
     return cli_sock
 
-# Check args and get connection/command details
+# Parse arguments and validate
 host, port, cmd, msg = check_args()
 if host == -1:
     exit(1)
-
-# Make command lower case
 cmd = cmd.lower()
 
 try:
-    # Initialise socket
     cli_sock = ""
-    # Check if command is list
+
     if cmd == "list":
-        # Send list request to server
+        # Send request and await response
         cli_sock = sendRequest("list")
-        # Prepare to receive listing
         bytes = netfunctions.recv_listing(cli_sock)
-        # Print confirmation if list was received
+        # Print listing
         if bytes > 0:
             print("Received listing (" + str(bytes) + " bytes) from " + host + ":" + str(port) + " (Success)")
             exit(0)
-        # Print error if no listing was received
+        # Print error
         print("Listing not received, connection lost (Failure)")
         exit(1)
 
-    # Check filename
     if not isValidFilename(msg):
         exit(1)
 
     # Store if file exists
     fileExists = os.path.exists("./" + msg)
 
-    # Check if command is put
     if cmd == "put":
-        #Check file exists
         if not fileExists:
             print("File " + msg + " does not exist (Failure)")
             exit(1)
-        # Send put request with filesize
+        # Send file
         bytes_to_send = os.path.getsize(msg)
         cli_sock = sendRequest("put", msg + " " + str(bytes_to_send))
-        #Start sending file
         bytes = netfunctions.send_file (cli_sock, msg)
-        # Print confirmation if file was properly sent
+        # Print confirmation
         if bytes > -1:
-            print("Put file " + msg + " (" + str(bytes) +  " bytes) in server " + host + ":" + str(port) + " (Success)")
+            print("Put file " + msg + " (" + str(bytes) + " bytes) in server " + host + ":" + str(port) + " (Success)")
             exit(0)
-        # Exit with error if an error occurred
+        # Exit with error
         exit(1)
 
-    # Check if command is get
     if cmd == "get":
-        # Check file doesn't already exist
         if fileExists:
             print("File " + msg + " already exists (Failure)")
             exit(1)
-        # Send get request
+        # Get file size from server
         cli_sock = sendRequest("get", msg)
-        # Get filesize from server
         filesize = int(cli_sock.recv(2048).decode())
-        # Exit if file doesn't exist
+        # Receive if file exists
         if filesize == -1:
             print("File does not exist in server (Failure)")
             exit(1)
-        # Prepare to receive file
         bytes = netfunctions.recv_file(cli_sock, msg, filesize)
-        # Print confirmation if file was received
+        # Print confirmation
         if bytes > -1:
             print("Got file " + msg + " (" + str(bytes) + " bytes) from server " + host + ":" + str(port) + " (Success)")
             exit(0)
         else:
-            # Delete file if not fully received
+            # Delete file and exit with error
             netfunctions.delete_file(msg)
             exit(1)
-
-    # Print error if command not recognised
+            
+    # Error for incorrect command
     print("Unrecognised command: " + cmd)
     exit(1)
+
 except Exception:
-    #Print error for unhandled exception
+    # Error for unhandled exception
     print("Disconnected from server (Failure)")
     exit(1)
 finally:
