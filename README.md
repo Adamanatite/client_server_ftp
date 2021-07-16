@@ -7,6 +7,6 @@ Python code for a client to communicate with a server using sockets for file tra
   * <b>Get</b>: Gets a file from the server folder and downloads it into the client folder
 
 <b>Usage:</b><br />
-Both the client and server modules (client.py and server.py) are run from the command prompt <br />
-To run the server, use the command "python server.py <portNumber>" <br />
-To run a client command, use the command "python client.py <hostName> <portNumber> <get/put/list> (filename)" (A filename is not required for the "list" command) 
+  * Both the client and server modules (client.py and server.py) are run from the command prompt <br />
+  * To run the server, use the command "python server.py <portNumber>" <br />
+  * To run a client command, use the command "python client.py <hostName> <portNumber> <get/put/list> (filename)" (A filename is not required for the "list" command) 
