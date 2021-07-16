@@ -3,38 +3,47 @@ import socket
 import os
 import os.path
 
-# Delete file if exists
+
 def delete_file(file):
+    """Deletes a given file, if it exists
+
+    Parameters:
+    file (String): The filename of the file to be deleted
+    """
     if os.path.exists(file):
         os.remove(file)
 
-# Send file between client and server
-def send_file(socket, filename):
 
+def send_file(socket, filename):
+    """Sends a file between client and server
+
+    Parameters:
+    socket: The socket the file will be transferred over
+    filename: The name of the file to send
+
+    Returns:
+    bytes_sent: The number of bytes sent
+    """
     #Get filesize and initialise counter
     bytes_to_send = os.path.getsize(filename)
     bytes_sent = 0
 
-    # Get status from server
+    # Cancel if file exists
     status = socket.recv(2048).decode()
-    # Cancel if file already exists
     if status == "exists":
         print("File already existed (Failure)")
         return -1
 
-    # Open file
     with open(filename, "rb") as f:
-        # Initialise data
         data = bytearray(1)
-        # Read until data is no longer sent
+        # Read in and send all file data
         while len(data) > 0:
             data = f.read(4096)
             socket.sendall(data)
             bytes_sent += len(data)
 
-    # Get response from receiver
+    # Parse response
     response = socket.recv(2048).decode()
-    # Parse response as int
     try:
         response = int(response)
     except:
@@ -47,35 +56,51 @@ def send_file(socket, filename):
     return bytes_sent
 
 
-# Receive file from socket
+
 def recv_file(socket, name, size):
-    #Initialise variables
+    """Receives a file from client or server
+
+    Parameters:
+    socket: The socket the file will be transferred over
+    name: The name of the file to receive
+    size: The size of the file to receive (in bytes)
+
+    Returns:
+    bytes_read: The number of bytes received
+    """
     data = bytearray(1)
     bytes_read = 0
-
-    # Send confirmation
+    # Prepare to receive
     socket.sendall(str.encode("ready"))
 
     # Open file to write
     with open(name, "wb") as f:
-        #Loop while we are receiving data and haven't received the whole file
+        # Receive all data
         while len(data) > 0 and bytes_read < size:
             data = socket.recv(4096)
-            #Parse filesize if this is the first loop
             f.write(data)
             bytes_read += len(data)
 
-    #Send error if we missed bytes
+    # Send error if we missed bytes
     if bytes_read < size:
         print("Error: read " + str(bytes_read) + " of " + str(filesize) + " bytes (Failure)")
         return -1
 
-    #Send bytes received to sender
+    # Send bytes received to sender
     socket.sendall(str.encode(str(bytes_read)))
     return bytes_read
 
-# Send directory listing
+
+
 def send_listing(socket):
+    """Sends directory listing to client
+
+    Parameters:
+    socket: The socket the listing will be sent over
+
+    Returns:
+    bytes_sent: The number of bytes sent
+    """
     #Split files by new line
     toSend = str.encode('\n'.join(os.listdir()) + "\n")
     #Get bite size and send
@@ -84,9 +109,16 @@ def send_listing(socket):
 
     return bytes_sent
 
-# Receive directory listing
+
 def recv_listing(socket):
-    #Initialise variables
+    """Receives directory listing from server
+
+    Parameters:
+    socket: The socket the listing will be received over
+
+    Returns:
+    bytes_read: The number of bytes received
+    """
     data = bytearray(1)
     bytes_read = 0
 
@@ -98,5 +130,4 @@ def recv_listing(socket):
         data = socket.recv(4096)
         print(data.decode())
         bytes_read += len(data)
-    # Return number of bytes read
     return bytes_read
