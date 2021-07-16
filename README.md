@@ -1,5 +1,5 @@
 # client_server_socket
-Python code for a client to communicate with a server for file transfer and listing
+Python code for a client to communicate with a server using sockets for file transfer and listing
 
 <b>Usable client commands:</b>
   * <b>List</b>: Lists all of the files currently stored on the server
