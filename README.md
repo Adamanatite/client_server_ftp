@@ -1,4 +1,4 @@
-# client_server_ftp
+# Client and Server File Transfer
 Python code for a client to communicate with a server using sockets for file transfer and listing
 
 <b>Usable client commands:</b>
